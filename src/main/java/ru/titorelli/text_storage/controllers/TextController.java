@@ -3,6 +3,7 @@ package ru.titorelli.text_storage.controllers;
 import com.fasterxml.jackson.databind.json.JsonMapper;
 import lombok.AllArgsConstructor;
 import org.jetbrains.annotations.NotNull;
+import org.jetbrains.annotations.Nullable;
 import org.springframework.http.MediaType;
 import org.springframework.http.ResponseEntity;
 import org.springframework.web.bind.annotation.*;
@@ -34,14 +35,30 @@ public class TextController {
         return ResponseEntity.internalServerError().build();
     }
 
+    @PutMapping(value = "/{textUuid}/normalized", consumes = MediaType.TEXT_PLAIN_VALUE, produces = MediaType.APPLICATION_JSON_VALUE)
+    ResponseEntity<Boolean> putNormalized(@RequestBody(required = true) String normalizedTxt, @PathVariable("textUuid") UUID textUuid) {
+        final String normalizedUuid = uuidHelper.getForNormalizedText(textUuid);
+
+        if (textRepository.put(normalizedUuid, normalizedTxt)) {
+            return ResponseEntity.ok(true);
+        }
+
+        return ResponseEntity.internalServerError().build();
+    }
+
     @PutMapping(value = "", consumes = MediaType.MULTIPART_FORM_DATA_VALUE, produces = MediaType.TEXT_PLAIN_VALUE)
-    ResponseEntity<String> put(@NotNull @RequestPart("text") String txt, @NotNull @RequestPart("metadata") String metadataStr) {
+    ResponseEntity<String> putMultipart(
+            @NotNull @RequestPart("text") String txt,
+            @NotNull @RequestPart("metadata") String metadataStr,
+            @Nullable @RequestPart(value = "normalized", required = false) String normalizedText
+    ) {
         if (!validateJson(metadataStr)) {
             return ResponseEntity.badRequest().build();
         }
 
         final String textUuid = uuidHelper.getForText(txt);
         final String metadataUuid = uuidHelper.getForMetadata(textUuid);
+        final String normalizedUuid = uuidHelper.getForNormalizedText(textUuid);
 
         if (textRepository.put(textUuid, txt)) {
             textRepository.getStatsHelper().init(uuidHelper.getForStats(textUuid), txt);
@@ -51,6 +68,12 @@ public class TextController {
 
         if (!textRepository.put(metadataUuid, metadataStr)) {
             return ResponseEntity.internalServerError().build();
+        }
+
+        if (normalizedText != null) {
+            if (!textRepository.put(normalizedUuid, normalizedText)) {
+                return ResponseEntity.internalServerError().build();
+            }
         }
 
         return ResponseEntity.ok(textUuid);
@@ -63,6 +86,14 @@ public class TextController {
         textRepository.getStatsHelper().incrReads(uuidHelper.getForStats(guid));
 
         return ResponseEntity.of(txt);
+    }
+
+    @GetMapping(value = "/{guid}/normalized", produces = MediaType.TEXT_PLAIN_VALUE)
+    ResponseEntity<String> getNormalized(@PathVariable @NotNull UUID guid) {
+        final String normalizedUuid = uuidHelper.getForNormalizedText(guid);
+        final Optional<String> normalizedText = textRepository.get(normalizedUuid);
+
+        return ResponseEntity.of(normalizedText);
     }
 
     @PostMapping(value = "/get_hash", consumes = MediaType.TEXT_PLAIN_VALUE, produces = MediaType.TEXT_PLAIN_VALUE)

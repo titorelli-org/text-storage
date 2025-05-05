@@ -15,7 +15,6 @@ import ru.titorelli.text_storage.struct.Stats;
 
 import java.io.File;
 import java.io.IOException;
-import java.nio.charset.Charset;
 import java.nio.charset.StandardCharsets;
 import java.nio.file.Files;
 import java.util.Optional;
@@ -23,15 +22,12 @@ import java.util.Optional;
 @Slf4j
 @Repository
 public class TextRepository {
-    @Autowired
-    private UuidHelper uuidHelper;
-    private RocksDB db;
-    @Getter
-    private StatsHelper statsHelper;
+    @Autowired private RocksDB db;
+    @Getter private StatsHelper statsHelper;
 
     public synchronized boolean put(@NotNull String key, @NotNull String val) {
         try {
-            db.put(key.getBytes(), val.getBytes(Charset.defaultCharset()));
+            db.put(key.getBytes(), val.getBytes(StandardCharsets.UTF_8));
 
             return true;
         } catch (RocksDBException e) {
@@ -47,7 +43,7 @@ public class TextRepository {
 
             if (bytes == null) return Optional.empty();
 
-            final String str = new String(bytes, StandardCharsets.US_ASCII);
+            final String str = new String(bytes, StandardCharsets.UTF_8);
 
             return Optional.of(str);
         } catch (RocksDBException e) {
