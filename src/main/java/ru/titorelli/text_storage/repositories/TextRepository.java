@@ -10,7 +10,6 @@ import org.rocksdb.RocksDBException;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.stereotype.Repository;
 import ru.titorelli.text_storage.helpers.StatsHelper;
-import ru.titorelli.text_storage.helpers.UuidHelper;
 import ru.titorelli.text_storage.struct.Stats;
 
 import java.io.File;
@@ -22,7 +21,7 @@ import java.util.Optional;
 @Slf4j
 @Repository
 public class TextRepository {
-    @Autowired private RocksDB db;
+    private RocksDB db;
     @Getter private StatsHelper statsHelper;
 
     public synchronized boolean put(@NotNull String key, @NotNull String val) {
